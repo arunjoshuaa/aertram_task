@@ -8,7 +8,15 @@ class UserService {
   Future<User?> fetchProfile() async {
     try {
       // Make the GET request to the API endpoint
-      final response = await _dio.get("https://jsonplaceholder.typicode.com/users?id=3");
+      final response = await _dio.get("https://jsonplaceholder.typicode.com/users?id=3",
+      options: Options(
+        headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+        }
+      )
+      );
 
       // Check if the request was successful
       if (response.statusCode == 200) {

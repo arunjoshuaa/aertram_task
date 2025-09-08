@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path; // Add this line
+import 'package:path/path.dart' as path;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,20 +18,38 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   File? _imageFile;
   final _picker = ImagePicker();
-  // Create an instance of the UserService to fetch data
   final UserService _userService = UserService();
-  
-  // State variables to hold the user data and loading status
+
   User? _user;
   bool _isLoading = true;
+  bool _isEditing = false; // Add state to manage edit mode
 
-  // Controllers for the TextFields to display the user data
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
   late final TextEditingController _websiteController;
 
-  // Load the image path from SharedPreferences and display the image
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+    _websiteController = TextEditingController();
+    _fetchUser();
+    _loadProfileImage();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _websiteController.dispose();
+    super.dispose();
+  }
+
+  // Load the image path from SharedPreferences
   Future<void> _loadProfileImage() async {
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('profile_image_path');
@@ -59,26 +77,6 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController();
-    _emailController = TextEditingController();
-    _phoneController = TextEditingController();
-    _websiteController = TextEditingController();
-    _fetchUser();
-    _loadProfileImage(); // Call this method to load the saved image on start
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _websiteController.dispose();
-    super.dispose();
-  }
-
   // Method to fetch the user data from the API
   Future<void> _fetchUser() async {
     try {
@@ -96,7 +94,6 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _isLoading = false;
         });
-        // Handle case where user data is not found
         print('User not found.');
       }
     } catch (e) {
@@ -105,6 +102,12 @@ class _ProfilePageState extends State<ProfilePage> {
       });
       print('Failed to load user: $e');
     }
+  }
+
+  void _toggleEditMode() {
+    setState(() {
+      _isEditing = !_isEditing;
+    });
   }
 
   @override
@@ -132,16 +135,19 @@ class _ProfilePageState extends State<ProfilePage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               IconButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  // Add navigation logic to go back
+                                  Navigator.pop(context); 
+                                },
                                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                               ),
                               const Text("Profile", style: TextStyle(color: Colors.amber)),
                               TextButton.icon(
-                                onPressed: () {},
-                                icon: const Icon(Icons.edit, color: Colors.white),
-                                label: const Text(
-                                  "Edit",
-                                  style: TextStyle(color: Colors.white),
+                                onPressed: _toggleEditMode,
+                                icon: Icon(_isEditing ? Icons.check : Icons.edit, color: Colors.white),
+                                label: Text(
+                                  _isEditing ? "Save" : "Edit",
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                             ],
@@ -150,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             alignment: Alignment.center,
                             children: [
                               CircleAvatar(
-                                radius: 30,
+                                radius: 60,
                                 backgroundColor: Colors.red,
                                 backgroundImage: _imageFile != null
                                     ? FileImage(_imageFile!) as ImageProvider<Object>?
@@ -162,20 +168,24 @@ class _ProfilePageState extends State<ProfilePage> {
                               Positioned(
                                 bottom: 0,
                                 right: 0,
+                                // Corrected: Use a fixed-size container for the button
                                 child: Container(
+                                  width: 24, // Adjust size as needed
+                                  height: 24, // Adjust size as needed
                                   decoration: const BoxDecoration(
                                     color: Colors.white,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    icon: const Icon(
-                                      Icons.add_a_photo,
-                                      color: Colors.black,
-                                      size: 16,
+                                  child: InkWell(
+                                    onTap: _pickAndSaveImage,
+                                    customBorder: const CircleBorder(),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.add_a_photo,
+                                        color: Colors.black,
+                                        size: 16, // Adjust icon size
+                                      ),
                                     ),
-                                    onPressed: _pickAndSaveImage,
                                   ),
                                 ),
                               ),
@@ -183,15 +193,17 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           const SizedBox(height: 10),
                           Container(
-                            width: 80,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // Added padding for better look
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(40),
                               color: Colors.black,
-                              border: Border.all(style: BorderStyle.solid),
+                              border: Border.all(color: Colors.white, width: 1.0), // Changed border color for visibility
                             ),
                             child: const Row(
+                              mainAxisSize: MainAxisSize.min, // Use min size to wrap content
                               children: [
                                 Icon(Icons.check_circle, color: Colors.green),
+                                SizedBox(width: 5), // Spacing between icon and text
                                 Text(
                                   "Trading",
                                   style: TextStyle(color: Colors.white),
@@ -240,6 +252,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             children: [
                               TextFormField(
                                 controller: _nameController,
+                                readOnly: !_isEditing, // Make read-only when not in edit mode
                                 decoration: const InputDecoration(
                                   labelText: 'Name',
                                   prefixIcon: Icon(Icons.person),
@@ -247,6 +260,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               TextFormField(
                                 controller: _emailController,
+                                readOnly: !_isEditing,
                                 decoration: const InputDecoration(
                                   labelText: 'Email',
                                   prefixIcon: Icon(Icons.email),
@@ -254,6 +268,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               TextFormField(
                                 controller: _phoneController,
+                                readOnly: !_isEditing,
                                 decoration: const InputDecoration(
                                   labelText: 'Phone',
                                   prefixIcon: Icon(Icons.phone),
@@ -261,47 +276,19 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               TextFormField(
                                 controller: _websiteController,
+                                readOnly: !_isEditing,
                                 decoration: const InputDecoration(
                                   labelText: 'Website',
                                   prefixIcon: Icon(Icons.link),
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.notifications),
-                                ),
-                                title: const Text("Notification"),
-                                trailing: const Icon(Icons.arrow_forward_ios_outlined),
-                              ),
-                              ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.language),
-                                ),
-                                title: const Text("Language"),
-                                trailing: const Icon(Icons.arrow_forward_ios_outlined),
-                              ),
-                              ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.verified_user),
-                                ),
-                                title: const Text("Security"),
-                                trailing: const Icon(Icons.arrow_forward_ios_outlined),
-                              ),
-                              ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.person_add_alt_1),
-                                ),
-                                title: const Text("Referal Invite"),
-                                trailing: const Icon(Icons.arrow_forward_ios_outlined),
-                              ),
-                              ListTile(
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.document_scanner),
-                                ),
-                                title: const Text("Legal Documents"),
-                                trailing: const Icon(Icons.arrow_forward_ios_outlined),
-                              ),
+                              // You can extract these ListTiles into a separate widget for better readability
+                              _buildListTile(Icons.notifications, "Notification"),
+                              _buildListTile(Icons.language, "Language"),
+                              _buildListTile(Icons.verified_user, "Security"),
+                              _buildListTile(Icons.person_add_alt_1, "Referral Invite"),
+                              _buildListTile(Icons.document_scanner, "Legal Documents"),
                             ],
                           ),
                         ),
@@ -311,6 +298,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildListTile(IconData icon, String title) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Colors.grey[200], // Use a lighter color for visibility
+        child: Icon(icon, color: Colors.black54),
+      ),
+      title: Text(title, style: const TextStyle(color: Colors.black)),
+      trailing: const Icon(Icons.arrow_forward_ios_outlined, size: 16),
+      onTap: () {
+        // Add specific navigation or functionality for each list tile
+      },
     );
   }
 }
